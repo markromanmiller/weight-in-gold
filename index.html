@@ -1,0 +1,109 @@
+<html>
+  <head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha256-DF7Zhf293AJxJNTmh5zhoYYIMs2oXitRfBjY+9L//AY=" crossorigin="anonymous"> <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mdbootstrap@4.20.0/css/mdb.min.css" integrity="sha256-jpjYvU3G3N6nrrBwXJoVEYI/0zw8htfFnhT9ljN3JJw=" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Roboto+Slab:100,300,400,500,700|Material+Icons">
+    <link rel="stylesheet" href="/main.css">
+  </head>
+  <body>
+    <div class="container mt-5">
+    
+    
+    <h2>Today's Golden Player is</h2>
+    <h1 id="goldenname">Loading...</h1>
+    <img id="goldenimg" style="max-width:50%"></img>
+    <p>with the price of gold at <span id="goldenprice"></span></p>
+    <table id="example">
+      <thead><tr>
+        <th>Player</th>
+      <th>Position</th>
+      <th>Team</th>
+      <th>Weight (lbs)</th>
+      <th>Contract (USD/yr)</th>
+      <th>Contract by Weight (USD/yr/troy oz.)</th>
+      <th>Difference</th>
+      </tr></thead>
+    </table>
+    </div>
+    
+    <script
+  src="https://code.jquery.com/jquery-3.7.1.min.js"
+  integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+  crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.1.4/css/dataTables.dataTables.css" />
+  
+<script src="https://cdn.datatables.net/2.1.4/js/dataTables.js"></script>
+<script type="module">
+
+console.log("Runnning...")
+
+import { parse } from './index.min.js'
+
+function dateString(yourDate) {
+  const offset = yourDate.getTimezoneOffset();
+  yourDate = new Date(yourDate.getTime() - (offset*60*1000));
+  return yourDate.toISOString().split('T')[0];
+}
+
+$.get("contract_data.csv", null, function(data, status) {
+  
+  console.log("Received data, working...")
+  
+  const parsed = parse(data);
+  
+  console.log(parsed[0]);
+  
+  var table = null;
+  var keys = parsed.shift();
+  
+  if (table) {
+      table.destroy();        
+      $('#example').empty(); 
+  }
+  
+  const today = new Date();
+  const weekAgo = new Date(today);
+  weekAgo.setDate(today.getDate() - 7);
+  
+  $.get("https://eodhd.com/api/eod/XAUT-USD.CC?from=" + dateString(weekAgo) + "&to=" + dateString(today) + "&period=d&api_token=66d3b82e73efa6.13864441&fmt=json", "JSON", function(data2, status) {
+    
+    const gold_price = data2.slice(-1)[0].close;
+    
+    var closest;
+    var closest_distance = 1e12;
+    const parsed_wo_headshot = parsed.map(
+      (x) => {
+        const difference = Math.exp(Math.abs(Math.log(x[5]) - Math.log(gold_price))) - 1;
+        if (difference < closest_distance) {
+          closest_distance = difference;
+          closest = x;
+        }
+        const retval = x.slice(0, -1);
+        retval.push(difference * 100);
+        return retval;
+      }
+    );
+    
+    $("#goldenname").html(closest[0]);
+    $("#goldenimg").attr("src",closest[6]);
+    $("#goldenprice").html("$" + Math.round(gold_price * 100) / 100);
+    // 'render': DataTable.render.number(null, null, 0, '$')
+    
+    table = $('#example').DataTable({
+       data: parsed_wo_headshot,
+       order: [[6, 'asc']],
+       columns: [
+         {},{},{},{},
+         {render: DataTable.render.number( ',', '.', 0, '$')},
+         {render: DataTable.render.number( ',', '.', 2, '$')},
+         {render: DataTable.render.number( '', '.', 2, '', '%')}
+       ]
+    });
+    
+  });
+  
+});
+
+</script>
+
+  </body>
+</html>

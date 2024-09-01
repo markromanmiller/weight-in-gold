@@ -1,0 +1,73 @@
+---
+title: "Untitled"
+output: html_document
+date: "2024-08-26"
+---
+
+```{r}
+library(nflreadr)
+library(tidyverse)
+
+nflreadr::.clear_cache()
+
+raw_contracts <- load_contracts()
+
+raw_players <- load_players()
+
+contract_data <- raw_contracts %>%
+  mutate(
+    contract_start = ymd(paste0(year_signed, "-03-13")),
+    contract_end = contract_start + years(years)
+  ) %>%
+  filter(is_active) %>%
+  select(player, position, team, apy, weight, gsis_id) %>%
+  mutate(weight = as.numeric(weight)) %>%
+  mutate(
+    usd = apy * 1000000,
+    troy_oz = weight * 14.5833,
+    usd_per_troy_oz = usd / troy_oz
+  ) %>%
+  filter(usd > 300000, troy_oz < 10000) %>%
+  left_join(raw_players %>% select(gsis_id, headshot))
+
+
+contract_data %>%
+  select(-apy, -gsis_id, -troy_oz) %>%
+  write_csv("contract_data.csv")
+```
+
+
+```{r}
+contract_data %>%
+  ggplot(aes(x = usd, y = weight)) +
+  geom_point(aes(color = position)) +
+  geom_abline(slope = 1, intercept = log10(1/(2520 * 14.5833))) +
+  scale_x_log10() +
+  scale_y_log10()
+```
+
+```{r}
+gold_price <- 2546.30
+
+contract_data %>%
+  mutate(
+    ratio_diff_gold = exp(abs(log(usd_per_troy_oz) - log(gold_price))) - 1
+  ) %>%
+  arrange(ratio_diff_gold)
+
+```
+
+
+```{r}
+library(nflreadr)
+
+contracts <- load_contracts()
+
+non_matching_apys <- abs(contracts$apy * contracts$years - contracts$value) > 0.00002
+
+contracts[non_matching_apys]
+
+
+
+
+```
