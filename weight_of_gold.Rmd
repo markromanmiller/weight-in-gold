@@ -30,6 +30,14 @@ contract_data <- raw_contracts %>%
   filter(usd > 300000, troy_oz < 10000) %>%
   left_join(raw_players %>% select(gsis_id, headshot))
 
+cat(
+  'Powered by <a href="https://nflreadr.nflverse.com/">nflreadr</a> version ',
+  as.character(packageVersion("nflreadr")),
+  ". Contract data last updated on ",
+  date(),
+  ".",
+  sep="", file = "infotext.txt"
+)
 
 contract_data %>%
   select(-apy, -gsis_id, -troy_oz) %>%

@@ -6,12 +6,10 @@
   </head>
   <body>
     <div class="container mt-5">
-    
-    
-    <h2>Today's Golden Player is</h2>
-    <h1 id="goldenname">Loading...</h1>
-    <img id="goldenimg" style="max-width:50%"></img>
-    <p>with the price of gold at <span id="goldenprice"></span></p>
+    <h2 style="text-align: center;">Today's Golden Player is</h2>
+    <h1 style="text-align: center;" id="goldenname">Loading...</h1>
+    <img id="goldenimg" style="max-width:50%;display: block;margin-left: auto;margin-right: auto;"></img>
+    <p style="text-align: center;">One year of <span id="goldenname2"></span>'s contract is worth <span id="goldenannual"></span>. With his weight of <span id="goldenweight"></span> pounds, his value (by troy ounce) is <span id="goldenvalue"></span>. That value is only <span id="goldenerror"></span> different from the price of gold today, which is <span id="goldenprice"></span>.</p>
     <table id="example">
       <thead><tr>
         <th>Player</th>
@@ -23,6 +21,7 @@
       <th>Difference</th>
       </tr></thead>
     </table>
+    <p id="infotext"></p>
     </div>
     
     <script
@@ -43,6 +42,10 @@ function dateString(yourDate) {
   yourDate = new Date(yourDate.getTime() - (offset*60*1000));
   return yourDate.toISOString().split('T')[0];
 }
+
+$.get("infotext.txt", null, function(data, status) {
+  $("#infotext").html(data);
+})
 
 $.get("contract_data.csv", null, function(data, status) {
   
@@ -73,17 +76,25 @@ $.get("contract_data.csv", null, function(data, status) {
     const parsed_wo_headshot = parsed.map(
       (x) => {
         const difference = Math.exp(Math.abs(Math.log(x[5]) - Math.log(gold_price))) - 1;
+        const retval = x.slice(0, -1);
+        retval.push(difference * 100);
+        x.push(difference * 100);
         if (difference < closest_distance) {
           closest_distance = difference;
           closest = x;
         }
-        const retval = x.slice(0, -1);
-        retval.push(difference * 100);
         return retval;
       }
     );
     
     $("#goldenname").html(closest[0]);
+    $("#goldenname2").html(closest[0]); 
+    $("#goldenannual").html(parseFloat(closest[4]).toLocaleString('en-US', {style: 'currency', currency: 'USD'}));
+    
+    $("#goldenweight").html(closest[3]);
+    $("#goldenvalue").html("$" + Math.round(closest[5] * 100) / 100);
+    $("#goldenerror").html((Math.round(closest[7]*1000) / 1000) + "%");
+    
     $("#goldenimg").attr("src",closest[6]);
     $("#goldenprice").html("$" + Math.round(gold_price * 100) / 100);
     // 'render': DataTable.render.number(null, null, 0, '$')
